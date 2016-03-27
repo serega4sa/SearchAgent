@@ -7,6 +7,7 @@ import org.jsoup.select.Elements;
 import java.io.*;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
+import java.util.ArrayList;
 
 /**
  * Created by Sergey.Chmihun on 03/04/2016.
@@ -36,12 +37,14 @@ public class SearchAgent {
         } else attribute = "&tbs=dur:" + duration + "&tbm=vid";
 
         BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+        System.out.println("Enter path to the input file. Example: D:/data.txt");
         fileInputName = reader.readLine();
 
+        System.out.println("Enter number of pages to be parsed for every request:");
         int numberOfPages = Integer.parseInt(reader.readLine());
 
-        fileOutputName = fileInputName.substring(0, fileInputName.lastIndexOf("\\")) + "results.txt";
-        File file = new File(fileInputName);
+        fileOutputName = fileInputName.substring(0, fileInputName.lastIndexOf("/") + 1) + "results.txt";
+        File file = new File(fileOutputName);
         try {
             file.createNewFile();
         } catch (IOException e) {
@@ -51,17 +54,23 @@ public class SearchAgent {
         BufferedWriter writer = new BufferedWriter(new FileWriter(fileOutputName));
 
         BufferedReader r = new BufferedReader(new FileReader(fileInputName));
+        ArrayList<String> listOfRequests = new ArrayList<>();
 
         while (r.ready()) {
             String request = r.readLine();
-            writer.write(String.format("========== Request: %s ", request));
-            writer.write("\r\n");
-            saveLinks(numberOfPages, request, writer);
+            listOfRequests.add(request);
         }
 
         reader.close();
-        writer.close();
         r.close();
+
+        for (String item : listOfRequests) {
+            writer.write(String.format("========== Request: %s ==========", item));
+            writer.write("\r\n");
+            saveLinks(numberOfPages, item, writer);
+        }
+
+        writer.close();
     }
 
     public static void saveLinks(int numberOfPages, String request, BufferedWriter writer) throws IOException{
@@ -75,16 +84,14 @@ public class SearchAgent {
 
             for (Element link : links) {
                 String title = link.text();
-                String url = link.absUrl("href"); // absUrl("href") - Google returns URLs in format "http://www.google.com/url?q=<url>&sa=U&ei=<someKey>".
-                String gUrl = URLDecoder.decode(url.substring(url.indexOf('=') + 1, url.indexOf('&')), "UTF-8");
 
-                if (!url.startsWith("http") || !title.contains(request)) {
-                    continue; // Ads/news/etc.
+                if (title.toLowerCase().contains(request.toLowerCase())) {
+                    String gUrl = link.absUrl("href"); // absUrl("href") - Google returns URLs in format "http://www.google.com/url?q=<url>&sa=U&ei=<someKey>".
+                    String url = URLDecoder.decode(gUrl.substring(gUrl.indexOf('=') + 1, gUrl.indexOf('&')), "UTF-8");
+
+                    writer.write(String.format("Title: %s  - Google URL: %s  - Content URL: %s", title, gUrl, url));
+                    writer.write("\r\n");
                 }
-
-                writer.write(String.format("Title: %s  - Google URL: %s  - Content URL: %s", title, gUrl, url));
-                writer.write("\r\n");
-
                 //System.out.println(String.format("Title: %s  - URL: %s", title, url));
             }
         }

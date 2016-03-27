@@ -4,7 +4,7 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
-import java.io.IOException;
+import java.io.*;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 
@@ -13,14 +13,15 @@ import java.net.URLEncoder;
  */
 public class SearchAgent {
     private static String google = "http://www.google.com/search?q=";
-    private static String request = "Метод Фрейда 2";
+    private static String fileInputName;
+    private static String fileOutputName;
     private static String charset = "UTF-8";
     private static String userAgent = "Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10.4; en-US; rv:1.9.2.2) Gecko/20100316 Firefox/3.6.2";
     private static String duration = "l";
     private static String time = "";
     private static String attribute;
 
-    public static void main(String[] args) throws IOException, InvalidDataException {
+    public static void main(String[] args) throws IOException, InvalidDataException{
         if (args.length != 0) {
             if (args[0].equals("h")) time = "h";
             if (args[0].equals("d")) time = "d";
@@ -34,22 +35,58 @@ public class SearchAgent {
             attribute = "&tbs=qdr:" + time + ",dur:" + duration + "&tbm=vid";
         } else attribute = "&tbs=dur:" + duration + "&tbm=vid";
 
-        System.out.println(String.format("%s%s%s", google, URLEncoder.encode(request, charset), attribute));
+        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+        fileInputName = reader.readLine();
 
-        Elements links = Jsoup.connect(String.format("%s%s%s", google, URLEncoder.encode(request, charset), attribute)).userAgent(userAgent).get().select("a");
+        int numberOfPages = Integer.parseInt(reader.readLine());
 
-        for (Element link : links) {
-            String title = link.text();
-            String url = link.absUrl("href"); // absUrl("href") - Google returns URLs in format "http://www.google.com/url?q=<url>&sa=U&ei=<someKey>".
-            //url = URLDecoder.decode(url.substring(url.indexOf('=') + 1, url.indexOf('&')), "UTF-8");
+        fileOutputName = fileInputName.substring(0, fileInputName.lastIndexOf("\\")) + "results.txt";
+        File file = new File(fileInputName);
+        try {
+            file.createNewFile();
+        } catch (IOException e) {
+            System.out.println("Can't create file. Please, do it manually and launch program again");
+        }
 
-            if (!url.startsWith("http") || !title.contains(request)) {
-                continue; // Ads/news/etc.
+        BufferedWriter writer = new BufferedWriter(new FileWriter(fileOutputName));
+
+        BufferedReader r = new BufferedReader(new FileReader(fileInputName));
+
+        while (r.ready()) {
+            String request = r.readLine();
+            writer.write(String.format("========== Request: %s ", request));
+            writer.write("\r\n");
+            saveLinks(numberOfPages, request, writer);
+        }
+
+        reader.close();
+        writer.close();
+        r.close();
+    }
+
+    public static void saveLinks(int numberOfPages, String request, BufferedWriter writer) throws IOException{
+        for (int i = 0; i < numberOfPages; i++){
+            String pages = "&start=" + i * 10;
+
+            writer.write(String.format("---------- Page #%s ----------", i + 1));
+            writer.write("\r\n");
+
+            Elements links = Jsoup.connect(String.format("%s%s%s%s", google, URLEncoder.encode(request, charset), attribute, pages)).userAgent(userAgent).get().select("a");
+
+            for (Element link : links) {
+                String title = link.text();
+                String url = link.absUrl("href"); // absUrl("href") - Google returns URLs in format "http://www.google.com/url?q=<url>&sa=U&ei=<someKey>".
+                String gUrl = URLDecoder.decode(url.substring(url.indexOf('=') + 1, url.indexOf('&')), "UTF-8");
+
+                if (!url.startsWith("http") || !title.contains(request)) {
+                    continue; // Ads/news/etc.
+                }
+
+                writer.write(String.format("Title: %s  - Google URL: %s  - Content URL: %s", title, gUrl, url));
+                writer.write("\r\n");
+
+                //System.out.println(String.format("Title: %s  - URL: %s", title, url));
             }
-
-            System.out.println(String.format("Title: %s  - URL: %s", title, url));
         }
     }
 }
-
-// &start=0, 10, 20 - pages 1, 2, 3, 4

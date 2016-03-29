@@ -8,12 +8,13 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.math.BigDecimal;
 
 public class gui {
-    static JFrame frame = new JFrame("Search Agent v1.0");
+    JFrame frame = new JFrame("Search Agent v1.0");
 
     private JLabel title1;
-    private static JLabel title2;
+    private JLabel title2;
     private JLabel infoPath;
     private JLabel infoPages;
     private JTextField textFieldPath;
@@ -31,20 +32,22 @@ public class gui {
         frame.setVisible(true);
 
         panel1 = new JPanel();
+        panel1.setSize(-1, 100);
         frame.add(panel1);
 
         title1 = new JLabel("Status bar:");
         //title1.setSize(-1, 100);
         title1.setFont(new Font("Helevtica", Font.PLAIN, 16));
-        title1.setAlignmentX(Component.RIGHT_ALIGNMENT);
+        //title1.setAlignmentX(Component.RIGHT_ALIGNMENT);
         title1.setVisible(true);
+        title1.setHorizontalAlignment(SwingConstants.RIGHT);
         panel1.add(title1);
 
-        title1 = new JLabel("enter data to the empty fields");
+        title2 = new JLabel("enter data to the empty fields");
         //title1.setSize(-1, 100);
-        title1.setFont(new Font("Helevtica", Font.PLAIN, 16));
-        title1.setAlignmentX(Component.LEFT_ALIGNMENT);
-        title1.setVisible(true);
+        title2.setFont(new Font("Helevtica", Font.PLAIN, 16));
+        //title1.setAlignmentX(Component.LEFT_ALIGNMENT);
+        title2.setVisible(true);
         panel1.add(title2);
 
         infoPath = new JLabel("<html>Enter path to the input file. <font color='#808080'>Example: D:/data.txt</font></html>");
@@ -78,22 +81,49 @@ public class gui {
 
         buttonSearch = new JButton("Search");
         panel2.add(buttonSearch);
-        buttonSearch.addActionListener(new Action());
+        buttonSearch.addActionListener(new ActionSearch());
 
         buttonCancel = new JButton("Cancel");
+        buttonCancel.addActionListener(new ActionCancel());
         panel2.add(buttonCancel);
 
         frame.setLocationRelativeTo(null);
-        frame.setSize(600, 300);
+        frame.setSize(600, 400);
         frame.setVisible(true);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     }
 
-    static class Action implements ActionListener {
+    class ActionSearch implements ActionListener {
         @Override
         public void actionPerformed(ActionEvent e) {
-            title2.setText("action has been performed");
-            title2.setForeground(Color.GREEN);
+            MyInputVerifier verifier = new MyInputVerifier();
+            if (verifier.verify(textFieldPath) && verifier.verify(textFieldPages)) {
+                title2.setText("action has been performed");
+                title2.setForeground(Color.GREEN);
+            } else {
+                title2.setText("not all data had been specified");
+                title2.setForeground(Color.RED);
+            }
+        }
+    }
+
+    class ActionCancel implements ActionListener {
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            System.exit(0);
+        }
+    }
+
+    public class MyInputVerifier extends InputVerifier {
+        @Override
+        public boolean verify(JComponent input) {
+            String text = ((JTextField) input).getText();
+            try {
+                BigDecimal value = new BigDecimal(text);
+                return (value.scale() <= Math.abs(4));
+            } catch (NumberFormatException e) {
+                return false;
+            }
         }
     }
 

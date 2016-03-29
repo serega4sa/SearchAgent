@@ -32,7 +32,9 @@ public class SearchAgent {
             else throw new InvalidDataException();
         }
 
-        if (!time.isEmpty()) {
+        GUI gui = new GUI();
+
+        /*if (!time.isEmpty()) {
             attribute = "&tbs=qdr:" + time + ",dur:" + duration + "&tbm=vid";
         } else attribute = "&tbs=dur:" + duration + "&tbm=vid";
 
@@ -70,7 +72,7 @@ public class SearchAgent {
             saveLinks(numberOfPages, item, writer);
         }
 
-        writer.close();
+        writer.close();*/
     }
 
     public static void saveLinks(int numberOfPages, String request, BufferedWriter writer) throws IOException{

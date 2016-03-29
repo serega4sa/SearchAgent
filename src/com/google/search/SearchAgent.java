@@ -32,7 +32,7 @@ public class SearchAgent {
             else throw new InvalidDataException();
         }
 
-        GUI gui = new GUI();
+        gui gui = new gui();
 
         /*if (!time.isEmpty()) {
             attribute = "&tbs=qdr:" + time + ",dur:" + duration + "&tbm=vid";

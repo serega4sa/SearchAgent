@@ -8,13 +8,14 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.IOException;
 import java.math.BigDecimal;
 
 public class gui {
     JFrame frame = new JFrame("Search Agent v1.0");
 
     private JLabel title1;
-    private JLabel title2;
+    private static JLabel title2;
     private JLabel infoPath;
     private JLabel infoPages;
     private JTextField textFieldPath;
@@ -23,6 +24,10 @@ public class gui {
     private JPanel panel2;
     private JButton buttonSearch;
     private JButton buttonCancel;
+    private MyInputVerifier verifier;
+
+    private String fileInputName;
+    private int numberOfPages;
 
     public gui() {
         JFrame.setDefaultLookAndFeelDecorated(true);
@@ -93,17 +98,37 @@ public class gui {
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     }
 
+    public static class AlarmPrint {
+        public void print(String text, Color color) {
+            title2.setText(text);
+            title2.setForeground(color);
+        }
+    }
+
     class ActionSearch implements ActionListener {
         @Override
         public void actionPerformed(ActionEvent e) {
-            MyInputVerifier verifier = new MyInputVerifier();
-            if (verifier.verify(textFieldPath) && verifier.verify(textFieldPages)) {
-                title2.setText("action has been performed");
-                title2.setForeground(Color.GREEN);
-            } else {
-                title2.setText("not all data had been specified");
-                title2.setForeground(Color.RED);
-            }
+                /*verifier = new MyInputVerifier();
+                if (verifier.verify(textFieldPath) && verifier.verify(textFieldPages)) {*/
+                    fileInputName = textFieldPath.getText();
+                    numberOfPages = Integer.parseInt(textFieldPages.getText());
+                    textFieldPath.setText("");
+                    textFieldPages.setText("");
+                    title2.setText("wait until program finish parsing...");
+                    title2.setForeground(Color.BLUE);
+                    try {
+                        SearchAgent.prog.runProgram(fileInputName, numberOfPages);
+                    } catch (IOException e1) {
+                        title2.setText("Invalid data format");
+                        title2.setForeground(Color.RED);
+                    }
+                    title2.setText("action has been performed successfully");
+                    title2.setForeground(Color.GREEN);
+
+                /*} else {
+                    title2.setText("not all data had been specified");
+                    title2.setForeground(Color.RED);
+                }*/
         }
     }
 

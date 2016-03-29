@@ -4,6 +4,7 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
+import java.awt.*;
 import java.io.*;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
@@ -14,7 +15,7 @@ import java.util.ArrayList;
  */
 public class SearchAgent {
     private static String google = "http://www.google.com/search?q=";
-    private static String fileInputName;
+    //private static String fileInputName;
     private static String fileOutputName;
     private static String charset = "UTF-8";
     private static String userAgent = "Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10.4; en-US; rv:1.9.2.2) Gecko/20100316 Firefox/3.6.2";
@@ -22,7 +23,12 @@ public class SearchAgent {
     private static String time = "";
     private static String attribute;
 
+    public static SearchAgent prog;
+
     public static void main(String[] args) throws IOException, InvalidDataException{
+        prog = new SearchAgent();
+        gui gui = new gui();
+
         if (args.length != 0) {
             if (args[0].equals("h")) time = "h";
             if (args[0].equals("d")) time = "d";
@@ -32,25 +38,22 @@ public class SearchAgent {
             else throw new InvalidDataException();
         }
 
-        gui gui = new gui();
-
-        /*if (!time.isEmpty()) {
+        if (!time.isEmpty()) {
             attribute = "&tbs=qdr:" + time + ",dur:" + duration + "&tbm=vid";
         } else attribute = "&tbs=dur:" + duration + "&tbm=vid";
 
-        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
-        System.out.println("Enter path to the input file. Example: D:/data.txt");
-        fileInputName = reader.readLine();
 
-        System.out.println("Enter number of pages to be parsed for every request:");
-        int numberOfPages = Integer.parseInt(reader.readLine());
+    }
+
+    public void runProgram (String fileInputName, int numberOfPages) throws IOException {
 
         fileOutputName = fileInputName.substring(0, fileInputName.lastIndexOf("/") + 1) + "results.txt";
         File file = new File(fileOutputName);
         try {
             file.createNewFile();
         } catch (IOException e) {
-            System.out.println("Can't create file. Please, do it manually and launch program again");
+            gui.AlarmPrint alarmPrint = new gui.AlarmPrint();
+            alarmPrint.print("Can't create file. Please, do it manually and launch program again", Color.red);
         }
 
         BufferedWriter writer = new BufferedWriter(new FileWriter(fileOutputName));
@@ -63,7 +66,6 @@ public class SearchAgent {
             listOfRequests.add(request);
         }
 
-        reader.close();
         r.close();
 
         for (String item : listOfRequests) {
@@ -72,7 +74,8 @@ public class SearchAgent {
             saveLinks(numberOfPages, item, writer);
         }
 
-        writer.close();*/
+
+        writer.close();
     }
 
     public static void saveLinks(int numberOfPages, String request, BufferedWriter writer) throws IOException{

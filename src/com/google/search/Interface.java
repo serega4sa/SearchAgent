@@ -1,4 +1,4 @@
-package com.searchAgent;
+package com.google.search;
 
 import javax.swing.*;
 import java.awt.*;
@@ -21,7 +21,12 @@ public class Interface extends JFrame{
     private JButton searchButton;
     private JButton cancelButton;
     private JLabel status;
-    private JLabel CopyRight;
+    private JCheckBox youtubeCheckBox;
+    private JCheckBox megogoCheckBox;
+    private JCheckBox TVZavrCheckBox;
+
+    private MyPathInputVerifier verifier1;
+    private MyPagesInputVerifier verifier2;
 
     public Interface() {
         super("Search Agent v1.0");
@@ -58,61 +63,54 @@ public class Interface extends JFrame{
         searchButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                //Add code
+                verifier1 = new MyPathInputVerifier();
+                verifier2 = new MyPagesInputVerifier();
+                if (verifier1.verifyEmpty(textFieldPath)) {
+                    if (verifier2.verifyEmpty(textFieldPages)) {
+                        if (verifier1.verify(textFieldPath)) {
+                            if (verifier2.verify(textFieldPages)) {
+                                //if (youtubeCheckBox.isSelected()) //set variable
+                                //if (megogoCheckBox.isSelected()) //set variable
+                                //if (TVZavrCheckBox.isSelected()) //set variable
+                                String file = textFieldPath.getText();
+                                SearchAgent.prog.setFileInputName(file);
+                                SearchAgent.prog.setNumberOfPages(Integer.parseInt(textFieldPages.getText()));
+                                SearchAgent.prog.setqDuration(String.valueOf(comboBoxqDur.getSelectedItem()));
+                                SearchAgent.prog.setvDuration(String.valueOf(comboBoxvDur.getSelectedItem()));
+                                SearchAgent.prog.setGoogleLocation(String.valueOf(comboBoxLocation.getSelectedItem()));
+
+                                try {
+                                    SearchAgent.prog.runProgram();
+                                } catch (IOException e1) {
+                                    //status.setText("Something went wrong. Try again");
+                                    //status.setForeground(Color.RED);
+                                }
+
+                            } else {
+                                status.setText("Invalid data format. Number of pages should be integer");
+                                status.setForeground(Color.RED);
+                                textFieldPages.setText("");
+                            }
+                        } else {
+                            status.setText("Invalid path format. Use next format: C:/data.txt");
+                            status.setForeground(Color.RED);
+                            textFieldPath.setText("");
+                        }
+                    } else {
+                        status.setText("Number of pages is not specified. Please, fill it");
+                        status.setForeground(Color.RED);
+                    }
+                } else {
+                    status.setText("Path is not specified. Please, fill it");
+                    status.setForeground(Color.RED);
+                }
             }
         });
     }
 
-    /*class ActionSearch implements ActionListener {
-        @Override
-        public void actionPerformed(ActionEvent e) {
-            verifier1 = new MyPathInputVerifier();
-            verifier2 = new MyPagesInputVerifier();
-            verifier3 = new MyTimeInputVerifier();
-            if (verifier1.verifyEmpty(textFieldPath)) {
-                if (verifier2.verifyEmpty(textFieldPages)) {
-                    if (verifier3.verifyEmpty(textFieldTime)) {
-                        fileInputName = textFieldPath.getText();
-                        numberOfPages = Integer.parseInt(textFieldPages.getText());
-                        textFieldPath.setText("");
-                        textFieldPages.setText("");
-                        title2.setText("wait until program finish parsing...");
-                        title2.setForeground(Color.BLUE);
-
-                        try {
-                            SearchAgent.prog.runProgram(fileInputName, numberOfPages);
-                        } catch (IOException e1) {
-                            title2.setText("Invalid data format");
-                            title2.setForeground(Color.RED);
-                        }
-
-                        title2.setText("action has been performed successfully");
-                        title2.setForeground(Color.GREEN);
-
-                        try {
-                            Thread.sleep(5000);
-                        } catch (InterruptedException e1) {
-                            e1.printStackTrace();
-                        }
-
-                        System.exit(0);
-                    } else {
-                        title2.setText("Time interval is empty. Please, specify it");
-                        title2.setForeground(Color.RED);
-                        textFieldPages.setText("");
-                    }
-                } else {
-                    title2.setText("Field with number of pages is empty. Please, specify it");
-                    title2.setForeground(Color.RED);
-                    textFieldPages.setText("");
-                }
-            } else {
-                title2.setText("Path field is empty. Please, specify it");
-                title2.setForeground(Color.RED);
-                textFieldPath.setText("");
-            }
-        }
-    }*/
+    public JLabel getStatus() {
+        return status;
+    }
 
     class ActionCancel implements ActionListener {
         @Override
@@ -125,7 +123,7 @@ public class Interface extends JFrame{
         @Override
         public boolean verify(JComponent input) {
             String text = ((JTextField) input).getText();
-            if (text.matches("[A-Z]:\\[a-zA-Z]+.txt")) {
+            if (text.matches("[a-zA-Z]:[/[a-zA-Z0-9_-]+]+.txt")) {
                 return true;
             } else {
                 return false;
@@ -146,34 +144,11 @@ public class Interface extends JFrame{
         @Override
         public boolean verify(JComponent input) {
             String text = ((JTextField) input).getText();
-            if (text.matches("\\d")) {
+            if (text.matches("\\d+")) {
                 return true;
             } else {
                 return false;
             }
-        }
-
-        public boolean verifyEmpty(JComponent input) {
-            String text = ((JTextField) input).getText();
-            if (!text.isEmpty()) {
-                return true;
-            } else {
-                return false;
-            }
-        }
-    }
-
-    public class MyqDurationInputVerifier extends InputVerifier {
-        @Override
-        public boolean verify(JComponent input) {
-            String[] pattern = {"hour", "day", "week", "month", "year"};
-            String text = ((JTextField) input).getText();
-            for (String item : pattern) {
-                if (text.equals(item)) {
-                    return true;
-                }
-            }
-            return false;
         }
 
         public boolean verifyEmpty(JComponent input) {

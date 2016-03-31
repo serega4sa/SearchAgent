@@ -9,7 +9,6 @@ import java.io.IOException;
  * Created by Sergey.Chmihun on 03/30/2016.
  */
 public class Interface extends JFrame{
-
     JFrame frame = new JFrame();
 
     private JComboBox comboBoxqDur;
@@ -35,6 +34,7 @@ public class Interface extends JFrame{
         setContentPane(rootPanel);
 
         pack();
+        this.setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
         setVisible(true);

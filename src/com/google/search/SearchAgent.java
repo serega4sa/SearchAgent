@@ -1,6 +1,7 @@
 package com.google.search;
 
 import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
@@ -24,6 +25,7 @@ public class SearchAgent {
     private String vDuration;
     private String googleLocation;
     private String attribute;
+    private String[] whiteList;
 
     public static SearchAgent prog;
     public static Interface anInterface;
@@ -81,6 +83,10 @@ public class SearchAgent {
         this.numberOfPages = numberOfPages;
     }
 
+    public void setWhiteList(String[] whiteList) {
+        this.whiteList = whiteList;
+    }
+
     public void createAttribute() {
         if (!qDuration.isEmpty()) {
             if (!vDuration.isEmpty()) {
@@ -98,9 +104,6 @@ public class SearchAgent {
     }
 
     public void runProgram () throws IOException {
-        anInterface.getStatus().setText("processing...");
-        anInterface.getStatus().setForeground(Color.BLUE);
-
         createAttribute();
 
         fileOutputName = fileInputName.substring(0, fileInputName.lastIndexOf("/") + 1) + "results.txt";
@@ -146,16 +149,43 @@ public class SearchAgent {
 
             for (Element link : links) {
                 String title = link.text();
+                String alternativeRequest = "";
+                if (request.toLowerCase().contains("ё")) {
+                    alternativeRequest = request.toLowerCase().replaceAll("ё", "е");
+                }
 
-                if (title.toLowerCase().contains(request.toLowerCase())) {
+                if (title.toLowerCase().contains(request.toLowerCase()) || (!alternativeRequest.isEmpty() && title.toLowerCase().contains(alternativeRequest))) {
                     String gUrl = link.absUrl("href"); // absUrl("href") - Google returns URLs in format "http://www.google.com/url?q=<url>&sa=U&ei=<someKey>".
                     String url = URLDecoder.decode(gUrl.substring(gUrl.indexOf('=') + 1, gUrl.indexOf('&')), "UTF-8");
 
-                    writer.write(String.format("Title: %s  - Google URL: %s  - Content URL: %s", title, gUrl, url));
-                    writer.write("\r\n");
+                    if (!checkPlayer(url)) {
+                        writer.write(String.format("Title: %s  - Google URL: %s  - Content URL: %s", title, gUrl, url));
+                        writer.write("\r\n");
+                    }
                 }
                 //System.out.println(String.format("Title: %s  - URL: %s", title, url));
             }
         }
+    }
+
+    public boolean checkPlayer(String url) throws IOException {
+        for (String item : whiteList) {
+            if (url.contains(item)) return true;
+        }
+
+        Document doc = Jsoup.connect(url).get();
+        Elements iframes = doc.select("iframe");
+
+        for (Element element : iframes) {
+            if (element != null && element.attr("src").contains("http")) {
+                String videoLink = element.attr("src");
+
+                for (String item : whiteList) {
+                    if (videoLink.contains(item)) return true;
+                }
+            }
+        }
+
+        return false;
     }
 }

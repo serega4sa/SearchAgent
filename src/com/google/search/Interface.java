@@ -79,6 +79,12 @@ public class Interface extends JFrame{
                                 SearchAgent.prog.setvDuration(String.valueOf(comboBoxvDur.getSelectedItem()));
                                 SearchAgent.prog.setGoogleLocation(String.valueOf(comboBoxLocation.getSelectedItem()));
 
+                                String[] list = new String[3];
+                                if (youtubeCheckBox.isSelected()) list[0] = "youtube";
+                                if (megogoCheckBox.isSelected()) list[1] = "megogo";
+                                if (TVZavrCheckBox.isSelected()) list[2] = "tvzavr";
+                                SearchAgent.prog.setWhiteList(list);
+
                                 try {
                                     SearchAgent.prog.runProgram();
                                 } catch (IOException e1) {

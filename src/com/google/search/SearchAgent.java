@@ -25,7 +25,7 @@ public class SearchAgent {
     private String vDuration;
     private String googleLocation;
     private String attribute;
-    private String[] whiteList;
+    private ArrayList<String> whiteList;
 
     public static SearchAgent prog;
     public static Interface anInterface;
@@ -83,7 +83,7 @@ public class SearchAgent {
         this.numberOfPages = numberOfPages;
     }
 
-    public void setWhiteList(String[] whiteList) {
+    public void setWhiteList(ArrayList<String> whiteList) {
         this.whiteList = whiteList;
     }
 
@@ -146,6 +146,7 @@ public class SearchAgent {
             writer.write("\r\n");
 
             Elements links = Jsoup.connect(String.format("%s%s%s%s", googleLocation, URLEncoder.encode(request, charset), attribute, pages)).userAgent(userAgent).get().select("a");
+            int counterOfFoundRes = 0;
 
             for (Element link : links) {
                 String title = link.text();
@@ -158,12 +159,23 @@ public class SearchAgent {
                     String gUrl = link.absUrl("href"); // absUrl("href") - Google returns URLs in format "http://www.google.com/url?q=<url>&sa=U&ei=<someKey>".
                     String url = URLDecoder.decode(gUrl.substring(gUrl.indexOf('=') + 1, gUrl.indexOf('&')), "UTF-8");
 
-                    if (!checkPlayer(url)) {
+                    if (whiteList != null) {
+                        if (!checkPlayer(url)) {
+                            writer.write(String.format("Title: %s  - Google URL: %s  - Content URL: %s", title, gUrl, url));
+                            writer.write("\r\n");
+                            counterOfFoundRes++;
+                        }
+                    } else {
                         writer.write(String.format("Title: %s  - Google URL: %s  - Content URL: %s", title, gUrl, url));
                         writer.write("\r\n");
+                        counterOfFoundRes++;
                     }
                 }
-                //System.out.println(String.format("Title: %s  - URL: %s", title, url));
+            }
+
+            if (counterOfFoundRes == 0) {
+                writer.write("Videos that corresponds to the request wasn't found on this page.");
+                writer.write("\r\n");
             }
         }
     }
@@ -173,8 +185,8 @@ public class SearchAgent {
             if (url.contains(item)) return true;
         }
 
-        Document doc = Jsoup.connect(url).get();
-        Elements iframes = doc.select("iframe");
+        //In this part program goes to every link and find all iframe elements and check if they equal to white list items. Don't work properly. I suppose there should be used multithreading.
+        /*Elements iframes = Jsoup.connect(url).userAgent(userAgent).get().select("iframe");
 
         for (Element element : iframes) {
             if (element != null && element.attr("src").contains("http")) {
@@ -184,7 +196,7 @@ public class SearchAgent {
                     if (videoLink.contains(item)) return true;
                 }
             }
-        }
+        }*/
 
         return false;
     }

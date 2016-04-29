@@ -4,6 +4,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.IOException;
+import java.util.ArrayList;
 
 /**
  * Created by Sergey.Chmihun on 03/30/2016.
@@ -60,6 +61,48 @@ public class Interface extends JFrame{
             }
         });
 
+        comboBoxqDur.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                status.setText("");
+            }
+        });
+
+        comboBoxvDur.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                status.setText("");
+            }
+        });
+
+        comboBoxLocation.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                status.setText("");
+            }
+        });
+
+        youtubeCheckBox.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                status.setText("");
+            }
+        });
+
+        megogoCheckBox.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                status.setText("");
+            }
+        });
+
+        TVZavrCheckBox.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                status.setText("");
+            }
+        });
+
         searchButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -69,9 +112,9 @@ public class Interface extends JFrame{
                     if (verifier2.verifyEmpty(textFieldPages)) {
                         if (verifier1.verify(textFieldPath)) {
                             if (verifier2.verify(textFieldPages)) {
-                                //if (youtubeCheckBox.isSelected()) //set variable
-                                //if (megogoCheckBox.isSelected()) //set variable
-                                //if (TVZavrCheckBox.isSelected()) //set variable
+                                status.setText("processing...");
+                                status.setForeground(Color.BLUE);
+
                                 String file = textFieldPath.getText();
                                 SearchAgent.prog.setFileInputName(file);
                                 SearchAgent.prog.setNumberOfPages(Integer.parseInt(textFieldPages.getText()));
@@ -79,17 +122,18 @@ public class Interface extends JFrame{
                                 SearchAgent.prog.setvDuration(String.valueOf(comboBoxvDur.getSelectedItem()));
                                 SearchAgent.prog.setGoogleLocation(String.valueOf(comboBoxLocation.getSelectedItem()));
 
-                                String[] list = new String[3];
-                                if (youtubeCheckBox.isSelected()) list[0] = "youtube";
-                                if (megogoCheckBox.isSelected()) list[1] = "megogo";
-                                if (TVZavrCheckBox.isSelected()) list[2] = "tvzavr";
-                                SearchAgent.prog.setWhiteList(list);
+                                ArrayList<String> list = new ArrayList<>();
+                                if (youtubeCheckBox.isSelected()) list.add("youtube");
+                                if (megogoCheckBox.isSelected()) list.add("megogo");
+                                if (TVZavrCheckBox.isSelected()) list.add("tvzavr");
+                                if (!list.isEmpty()) SearchAgent.prog.setWhiteList(list);
+                                else SearchAgent.prog.setWhiteList(null);
 
                                 try {
                                     SearchAgent.prog.runProgram();
                                 } catch (IOException e1) {
-                                    //status.setText("Something went wrong. Try again");
-                                    //status.setForeground(Color.RED);
+                                    status.setText("Something went wrong. Try again");
+                                    status.setForeground(Color.RED);
                                 }
 
                             } else {

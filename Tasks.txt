@@ -1,5 +1,5 @@
-1. Finalize XLS writer
-2. Do refractoring (erase old functionality - txt writer)
-3. Finalize checking of player (implement multithreading)
-4. Check/improve requests processing mechanism
-5. Add check of existence of file (results.xls). If exist, create another one
+Do refractoring (erase old functionality - txt writer)
+Finalize checking of player (implement multithreading)
+Check/improve requests processing mechanism
+Add check of existence of file (results.xls). If exist, create another one
+Add filter that sort youtube links into separate tab

@@ -1,11 +1,14 @@
 package com.google.search;
 
+import jxl.Workbook;
+import jxl.write.*;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
 import java.awt.*;
+import java.awt.Label;
 import java.io.*;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
@@ -20,6 +23,7 @@ public class SearchAgent {
 
     private String fileInputName;
     private String fileOutputName;
+    private String fileOutputNameXls;
     private int numberOfPages;
     private String qDuration;
     private String vDuration;
@@ -107,7 +111,10 @@ public class SearchAgent {
         createAttribute();
 
         fileOutputName = fileInputName.substring(0, fileInputName.lastIndexOf("/") + 1) + "results.txt";
+        fileOutputNameXls = fileInputName.substring(0, fileInputName.lastIndexOf("/") + 1) + "Results.xls";
         File file = new File(fileOutputName);
+        File excelFile = new File(fileOutputNameXls);
+        WritableWorkbook workbook = Workbook.createWorkbook(excelFile);
         try {
             file.createNewFile();
         } catch (IOException e) {
@@ -130,16 +137,31 @@ public class SearchAgent {
         for (String item : listOfRequests) {
             writer.write(String.format("========== Request: %s ==========", item));
             writer.write("\r\n");
-            saveLinks(numberOfPages, item, writer);
+            WritableSheet sheet = workbook.createSheet(item, 0);
+            saveLinks(numberOfPages, item, writer, sheet);
         }
 
         writer.close();
+        try {
+            workbook.write();
+            workbook.close();
+        } catch (WriteException e) {
+            e.printStackTrace();
+        }
         anInterface.getStatus().setText("done");
         anInterface.getStatus().setForeground(Color.GREEN);
     }
 
-    public void saveLinks(int numberOfPages, String request, BufferedWriter writer) throws IOException{
+    public void saveLinks(int numberOfPages, String request, BufferedWriter writer, WritableSheet sheet) throws IOException{
+        int lineNumber = 1;
         for (int i = 0; i < numberOfPages; i++){
+            int x = i + 1;
+            jxl.write.Label cell = new jxl.write.Label(0, lineNumber, "Page #" + x);
+            try {
+                sheet.addCell(cell);
+            } catch (WriteException e) {
+                e.printStackTrace();
+            }
             String pages = "&start=" + i * 10;
 
             writer.write(String.format("---------- Page #%s ----------", i + 1));
@@ -161,21 +183,31 @@ public class SearchAgent {
 
                     if (whiteList != null) {
                         if (!checkPlayer(url)) {
-                            writer.write(String.format("Title: %s  - Google URL: %s  - Content URL: %s", title, gUrl, url));
-                            writer.write("\r\n");
-                            counterOfFoundRes++;
+                            writeToTxtFile(writer, gUrl);
+                            writeToXlsFile(sheet, gUrl, lineNumber, null);
                         }
                     } else {
-                        writer.write(String.format("Title: %s  - Google URL: %s  - Content URL: %s", title, gUrl, url));
-                        writer.write("\r\n");
-                        counterOfFoundRes++;
+                        writeToTxtFile(writer, gUrl);
+                        writeToXlsFile(sheet, gUrl, lineNumber, null);
                     }
+
+                    counterOfFoundRes++;
+                    lineNumber++;
                 }
             }
 
             if (counterOfFoundRes == 0) {
                 writer.write("Videos that corresponds to the request wasn't found on this page.");
                 writer.write("\r\n");
+                WritableFont cellFont = new WritableFont(WritableFont.ARIAL, 10);
+                try {
+                    cellFont.setColour(Colour.RED);
+                } catch (WriteException e) {
+                    e.printStackTrace();
+                }
+                WritableCellFormat cellFormat = new WritableCellFormat(cellFont);
+                writeToXlsFile(sheet, "Videos that corresponds to the request wasn't found on this page.", lineNumber, cellFormat);
+                lineNumber++;
             }
         }
     }
@@ -199,5 +231,26 @@ public class SearchAgent {
         }*/
 
         return false;
+    }
+
+    public void writeToTxtFile(BufferedWriter writer, String gUrl) throws IOException {
+        //writer.write(String.format("Title: %s  - Google URL: %s  - Content URL: %s", title, gUrl, url));   - old realization
+        writer.write(gUrl);
+        writer.write("\r\n");
+    }
+
+    public void writeToXlsFile(WritableSheet sheet, String gUrl, int lineNumber, WritableCellFormat cellFormat) {
+        jxl.write.Label cell;
+        if (cellFormat != null) {
+            cell = new jxl.write.Label(1, lineNumber, gUrl, cellFormat);
+        } else {
+            cell = new jxl.write.Label(1, lineNumber, gUrl);
+        }
+
+        try {
+            sheet.addCell(cell);
+        } catch (WriteException e) {
+            e.printStackTrace();
+        }
     }
 }

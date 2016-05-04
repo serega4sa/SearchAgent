@@ -66,7 +66,7 @@
         </constraints>
         <properties>
           <horizontalAlignment value="2"/>
-          <text value="Path to data base"/>
+          <text value="Name of input file"/>
         </properties>
       </component>
       <component id="da75c" class="javax.swing.JTextField" binding="textFieldPath">
@@ -78,7 +78,7 @@
           </grid>
         </constraints>
         <properties>
-          <toolTipText value="Example: C:/data.txt"/>
+          <toolTipText value="Example: data.txt"/>
         </properties>
       </component>
       <component id="b231b" class="javax.swing.JLabel">
@@ -256,11 +256,12 @@
           <text value="Choose query duration"/>
         </properties>
       </component>
-      <component id="cf80" class="javax.swing.JCheckBox" binding="youtubeCheckBox" default-binding="true">
+      <component id="cf80" class="javax.swing.JCheckBox" binding="youtubeCheckBox">
         <constraints>
           <grid row="4" column="5" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
         </constraints>
         <properties>
+          <enabled value="true"/>
           <text value="Youtube"/>
         </properties>
       </component>
@@ -336,6 +337,14 @@
           </grid>
         </constraints>
       </vspacer>
+      <component id="c21b1" class="javax.swing.JCheckBox" binding="iviCheckBox" default-binding="true">
+        <constraints>
+          <grid row="7" column="5" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+        </constraints>
+        <properties>
+          <text value="Ivi"/>
+        </properties>
+      </component>
     </children>
   </grid>
 </form>

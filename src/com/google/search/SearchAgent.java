@@ -8,7 +8,6 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
 import java.awt.*;
-import java.awt.Label;
 import java.io.*;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
@@ -30,6 +29,7 @@ public class SearchAgent {
     private String googleLocation;
     private String attribute;
     private ArrayList<String> whiteList;
+    private WritableWorkbook workbook;
 
     public static SearchAgent prog;
     public static Interface anInterface;
@@ -76,7 +76,7 @@ public class SearchAgent {
     }
 
     public void setFileInputName(String fileInputName) {
-        this.fileInputName = fileInputName;
+        this.fileInputName = System.getProperty("user.dir") + "\\Input\\" + fileInputName;
     }
 
     public int getNumberOfPages() {
@@ -110,11 +110,23 @@ public class SearchAgent {
     public void runProgram () throws IOException {
         createAttribute();
 
-        fileOutputName = fileInputName.substring(0, fileInputName.lastIndexOf("/") + 1) + "results.txt";
-        fileOutputNameXls = fileInputName.substring(0, fileInputName.lastIndexOf("/") + 1) + "Results.xls";
+        fileOutputName = System.getProperty("user.dir") + "\\Output\\" + "Results.txt";
+        fileOutputNameXls = System.getProperty("user.dir") + "\\Output\\" + "Results.xls";
         File file = new File(fileOutputName);
         File excelFile = new File(fileOutputNameXls);
-        WritableWorkbook workbook = Workbook.createWorkbook(excelFile);
+
+        /** Check of existence of file that we want to create for output data */
+        int i = 1;
+        while (true) {
+            if (!excelFile.isFile()) {
+                workbook = Workbook.createWorkbook(excelFile);
+                break;
+            } else {
+                excelFile = new File(System.getProperty("user.dir") + "\\Output\\" + "Results_" + i + ".xls");
+                i++;
+            }
+        }
+
         try {
             file.createNewFile();
         } catch (IOException e) {
@@ -134,11 +146,13 @@ public class SearchAgent {
 
         r.close();
 
+        /** For each request we create separate tab */
         for (String item : listOfRequests) {
             writer.write(String.format("========== Request: %s ==========", item));
             writer.write("\r\n");
             WritableSheet sheet = workbook.createSheet(item, 0);
-            saveLinks(numberOfPages, item, writer, sheet);
+            WritableSheet sheetYoutube = workbook.createSheet(item + " Youtube", 0);
+            saveLinks(item, writer, sheet, sheetYoutube);
         }
 
         writer.close();
@@ -148,12 +162,15 @@ public class SearchAgent {
         } catch (WriteException e) {
             e.printStackTrace();
         }
+
         anInterface.getStatus().setText("done");
         anInterface.getStatus().setForeground(Color.GREEN);
     }
 
-    public void saveLinks(int numberOfPages, String request, BufferedWriter writer, WritableSheet sheet) throws IOException{
+    public void saveLinks(String request, BufferedWriter writer, WritableSheet sheet, WritableSheet sheetYoutube) throws IOException{
         int lineNumber = 1;
+        int lineNumberYoutube = 1;
+
         for (int i = 0; i < numberOfPages; i++){
             int x = i + 1;
             jxl.write.Label cell = new jxl.write.Label(0, lineNumber, "Page #" + x);
@@ -177,28 +194,35 @@ public class SearchAgent {
                     alternativeRequest = request.toLowerCase().replaceAll("ё", "е");
                 }
 
+                /** Check if link title matches the query */
                 if (title.toLowerCase().contains(request.toLowerCase()) || (!alternativeRequest.isEmpty() && title.toLowerCase().contains(alternativeRequest))) {
                     String gUrl = link.absUrl("href"); // absUrl("href") - Google returns URLs in format "http://www.google.com/url?q=<url>&sa=U&ei=<someKey>".
                     String url = URLDecoder.decode(gUrl.substring(gUrl.indexOf('=') + 1, gUrl.indexOf('&')), "UTF-8");
 
-                    if (whiteList != null) {
+                    if (gUrl.contains("youtube")) {
+                        writeToXlsFile(sheetYoutube, gUrl, lineNumberYoutube, null);
+                        lineNumberYoutube++;
+                    } else if (whiteList != null) {
                         if (!checkPlayer(url)) {
                             writeToTxtFile(writer, gUrl);
                             writeToXlsFile(sheet, gUrl, lineNumber, null);
+                            lineNumber++;
                         }
                     } else {
                         writeToTxtFile(writer, gUrl);
                         writeToXlsFile(sheet, gUrl, lineNumber, null);
+                        lineNumber++;
                     }
 
                     counterOfFoundRes++;
-                    lineNumber++;
                 }
             }
 
+            /** If on the page no matches, write message */
             if (counterOfFoundRes == 0) {
                 writer.write("Videos that corresponds to the request wasn't found on this page.");
                 writer.write("\r\n");
+
                 WritableFont cellFont = new WritableFont(WritableFont.ARIAL, 10);
                 try {
                     cellFont.setColour(Colour.RED);
@@ -207,6 +231,7 @@ public class SearchAgent {
                 }
                 WritableCellFormat cellFormat = new WritableCellFormat(cellFont);
                 writeToXlsFile(sheet, "Videos that corresponds to the request wasn't found on this page.", lineNumber, cellFormat);
+
                 lineNumber++;
             }
         }

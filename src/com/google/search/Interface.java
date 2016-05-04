@@ -24,12 +24,13 @@ public class Interface extends JFrame{
     private JCheckBox youtubeCheckBox;
     private JCheckBox megogoCheckBox;
     private JCheckBox TVZavrCheckBox;
+    private JCheckBox iviCheckBox;
 
     private MyPathInputVerifier verifier1;
     private MyPagesInputVerifier verifier2;
 
     public Interface() {
-        super("Search Agent v1.0");
+        super("Search Agent v1.0.2 Beta");
         JFrame.setDefaultLookAndFeelDecorated(true);
 
         setContentPane(rootPanel);
@@ -103,6 +104,13 @@ public class Interface extends JFrame{
             }
         });
 
+        iviCheckBox.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                status.setText("");
+            }
+        });
+
         searchButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -124,6 +132,7 @@ public class Interface extends JFrame{
 
                                 ArrayList<String> list = new ArrayList<>();
                                 if (youtubeCheckBox.isSelected()) list.add("youtube");
+                                if (iviCheckBox.isSelected()) list.add("ivi.ru");
                                 if (megogoCheckBox.isSelected()) list.add("megogo");
                                 if (TVZavrCheckBox.isSelected()) list.add("tvzavr");
                                 if (!list.isEmpty()) SearchAgent.prog.setWhiteList(list);
@@ -172,7 +181,7 @@ public class Interface extends JFrame{
         @Override
         public boolean verify(JComponent input) {
             String text = ((JTextField) input).getText();
-            if (text.matches("[a-zA-Z]:[/[a-zA-Z0-9_-]+]+.txt")) {
+            if (text.matches("[a-zA-Z0-9_-]+.txt")) {
                 return true;
             } else {
                 return false;

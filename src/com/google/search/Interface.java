@@ -135,7 +135,6 @@ public class Interface extends JFrame{
                                     status.setText("Something went wrong. Try again");
                                     status.setForeground(Color.RED);
                                 }
-
                             } else {
                                 status.setText("Invalid data format. Number of pages should be integer");
                                 status.setForeground(Color.RED);

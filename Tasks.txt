@@ -1,0 +1,5 @@
+Do refractoring (erase old functionality - txt writer)
+Finalize checking of player (implement multithreading)
+Check/improve requests processing mechanism
+Add check of existence of file (results.xls). If exist, create another one
+Add filter that sort youtube links into separate tab

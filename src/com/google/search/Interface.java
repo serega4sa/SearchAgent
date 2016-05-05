@@ -5,6 +5,7 @@ import java.awt.*;
 import java.awt.event.*;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.ResourceBundle;
 
 /**
  * Created by Sergey.Chmihun on 03/30/2016.
@@ -25,12 +26,14 @@ public class Interface extends JFrame{
     private JCheckBox megogoCheckBox;
     private JCheckBox TVZavrCheckBox;
     private JCheckBox iviCheckBox;
+    private boolean isStopped;
+    private static ResourceBundle res = ResourceBundle.getBundle(SearchAgent.RESOURCE_PATH + "common_en");
 
     private MyPathInputVerifier verifier1;
     private MyPagesInputVerifier verifier2;
 
     public Interface() {
-        super("Search Agent v1.0.2 Beta");
+        super(res.getString("version"));
         JFrame.setDefaultLookAndFeelDecorated(true);
 
         setContentPane(rootPanel);
@@ -120,8 +123,7 @@ public class Interface extends JFrame{
                     if (verifier2.verifyEmpty(textFieldPages)) {
                         if (verifier1.verify(textFieldPath)) {
                             if (verifier2.verify(textFieldPages)) {
-                                status.setText("processing...");
-                                status.setForeground(Color.BLUE);
+                                new StatusThread();
 
                                 String file = textFieldPath.getText();
                                 SearchAgent.prog.setFileInputName(file);
@@ -138,28 +140,24 @@ public class Interface extends JFrame{
                                 if (!list.isEmpty()) SearchAgent.prog.setWhiteList(list);
                                 else SearchAgent.prog.setWhiteList(null);
 
-                                try {
-                                    SearchAgent.prog.runProgram();
-                                } catch (IOException e1) {
-                                    status.setText("Something went wrong. Try again");
-                                    status.setForeground(Color.RED);
-                                }
+                                new SearchThread();
+                                isStopped = true;
                             } else {
-                                status.setText("Invalid data format. Number of pages should be integer");
+                                status.setText(res.getString("invalid.number"));
                                 status.setForeground(Color.RED);
                                 textFieldPages.setText("");
                             }
                         } else {
-                            status.setText("Invalid path format. Use next format: C:/data.txt");
+                            status.setText(res.getString("invalid.file.name"));
                             status.setForeground(Color.RED);
                             textFieldPath.setText("");
                         }
                     } else {
-                        status.setText("Number of pages is not specified. Please, fill it");
+                        status.setText(res.getString("empty.number"));
                         status.setForeground(Color.RED);
                     }
                 } else {
-                    status.setText("Path is not specified. Please, fill it");
+                    status.setText(res.getString("empty.file.name"));
                     status.setForeground(Color.RED);
                 }
             }
@@ -219,10 +217,40 @@ public class Interface extends JFrame{
         }
     }
 
-    public class setText extends JLabel {
+    public class SetText extends JLabel {
         @Override
         public void setText(String toBeDisplayed) {
             super.setText(toBeDisplayed);
         }
     }
+
+    public class StatusThread extends Thread {
+        public StatusThread() {
+            start();
+        }
+
+        @Override
+        public void run() {
+            while (!isStopped) {
+                status.setText("processing...");
+                status.setForeground(Color.BLUE);
+            }
+        }
+    };
+
+    public class SearchThread extends Thread {
+        public SearchThread() {
+            start();
+        }
+
+        @Override
+        public void run() {
+            try {
+                SearchAgent.prog.runProgram();
+            } catch (IOException e) {
+                status.setText(res.getString("general.issue"));
+                status.setForeground(Color.RED);
+            }
+        }
+    };
 }

@@ -12,6 +12,7 @@ import java.io.*;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.util.ArrayList;
+import java.util.ResourceBundle;
 
 /**
  * Created by Sergey.Chmihun on 03/04/2016.
@@ -19,6 +20,8 @@ import java.util.ArrayList;
 public class SearchAgent {
     private String charset = "UTF-8";
     private String userAgent = "Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10.4; en-US; rv:1.9.2.2) Gecko/20100316 Firefox/3.6.2";
+    public static final String RESOURCE_PATH = "com.google.search.resources.";
+    private static ResourceBundle res = ResourceBundle.getBundle(SearchAgent.RESOURCE_PATH + "common_en");
 
     private String fileInputName;
     private String fileOutputName;
@@ -130,7 +133,7 @@ public class SearchAgent {
         try {
             file.createNewFile();
         } catch (IOException e) {
-            anInterface.getStatus().setText("Can't create file. Please, do it manually and launch program again");
+            anInterface.getStatus().setText(res.getString("cant.create.file"));
             anInterface.getStatus().setForeground(Color.RED);
         }
 
@@ -163,11 +166,11 @@ public class SearchAgent {
             e.printStackTrace();
         }
 
-        anInterface.getStatus().setText("done");
+        anInterface.getStatus().setText(res.getString("the.end"));
         anInterface.getStatus().setForeground(Color.GREEN);
     }
 
-    public void saveLinks(String request, BufferedWriter writer, WritableSheet sheet, WritableSheet sheetYoutube) throws IOException{
+    public void saveLinks(String request, BufferedWriter writer, WritableSheet sheet, WritableSheet sheetYoutube) {
         int lineNumber = 1;
         int lineNumberYoutube = 1;
 
@@ -181,10 +184,22 @@ public class SearchAgent {
             }
             String pages = "&start=" + i * 10;
 
-            writer.write(String.format("---------- Page #%s ----------", i + 1));
-            writer.write("\r\n");
+            try {
+                writer.write(String.format("---------- Page #%s ----------", i + 1));
+                writer.write("\r\n");
+            } catch (IOException e) {
+                anInterface.getStatus().setText(res.getString("cant.write.to.file"));
+                anInterface.getStatus().setForeground(Color.RED);
+            }
 
-            Elements links = Jsoup.connect(String.format("%s%s%s%s", googleLocation, URLEncoder.encode(request, charset), attribute, pages)).userAgent(userAgent).get().select("a");
+
+            Elements links = null;
+            try {
+                links = Jsoup.connect(String.format("%s%s%s%s", googleLocation, URLEncoder.encode(request, charset), attribute, pages)).userAgent(userAgent).get().select("a");
+            } catch (IOException e) {
+                anInterface.getStatus().setText(res.getString("google.ban"));
+                anInterface.getStatus().setForeground(Color.RED);
+            }
             int counterOfFoundRes = 0;
 
             for (Element link : links) {
@@ -197,19 +212,35 @@ public class SearchAgent {
                 /** Check if link title matches the query */
                 if (title.toLowerCase().contains(request.toLowerCase()) || (!alternativeRequest.isEmpty() && title.toLowerCase().contains(alternativeRequest))) {
                     String gUrl = link.absUrl("href"); // absUrl("href") - Google returns URLs in format "http://www.google.com/url?q=<url>&sa=U&ei=<someKey>".
-                    String url = URLDecoder.decode(gUrl.substring(gUrl.indexOf('=') + 1, gUrl.indexOf('&')), "UTF-8");
+                    String url = null;
+                    try {
+                        url = URLDecoder.decode(gUrl.substring(gUrl.indexOf('=') + 1, gUrl.indexOf('&')), "UTF-8");
+                    } catch (UnsupportedEncodingException e) {
+                        anInterface.getStatus().setText(res.getString("decoding.issue"));
+                        anInterface.getStatus().setForeground(Color.RED);
+                    }
 
                     if (gUrl.contains("youtube")) {
                         writeToXlsFile(sheetYoutube, gUrl, lineNumberYoutube, null);
                         lineNumberYoutube++;
                     } else if (whiteList != null) {
                         if (!checkPlayer(url)) {
-                            writeToTxtFile(writer, gUrl);
+                            try {
+                                writeToTxtFile(writer, gUrl);
+                            } catch (IOException e) {
+                                anInterface.getStatus().setText(res.getString("cant.write.to.file"));
+                                anInterface.getStatus().setForeground(Color.RED);
+                            }
                             writeToXlsFile(sheet, gUrl, lineNumber, null);
                             lineNumber++;
                         }
                     } else {
-                        writeToTxtFile(writer, gUrl);
+                        try {
+                            writeToTxtFile(writer, gUrl);
+                        } catch (IOException e) {
+                            anInterface.getStatus().setText(res.getString("cant.write.to.file"));
+                            anInterface.getStatus().setForeground(Color.RED);
+                        }
                         writeToXlsFile(sheet, gUrl, lineNumber, null);
                         lineNumber++;
                     }
@@ -220,8 +251,13 @@ public class SearchAgent {
 
             /** If on the page no matches, write message */
             if (counterOfFoundRes == 0) {
-                writer.write("Videos that corresponds to the request wasn't found on this page.");
-                writer.write("\r\n");
+                try {
+                    writer.write(res.getString("empty.result"));
+                    writer.write("\r\n");
+                } catch (IOException e) {
+                    anInterface.getStatus().setText(res.getString("cant.write.to.file"));
+                    anInterface.getStatus().setForeground(Color.RED);
+                }
 
                 WritableFont cellFont = new WritableFont(WritableFont.ARIAL, 10);
                 try {
@@ -230,14 +266,14 @@ public class SearchAgent {
                     e.printStackTrace();
                 }
                 WritableCellFormat cellFormat = new WritableCellFormat(cellFont);
-                writeToXlsFile(sheet, "Videos that corresponds to the request wasn't found on this page.", lineNumber, cellFormat);
+                writeToXlsFile(sheet, res.getString("empty.result"), lineNumber, cellFormat);
 
                 lineNumber++;
             }
         }
     }
 
-    public boolean checkPlayer(String url) throws IOException {
+    public boolean checkPlayer(String url) {
         for (String item : whiteList) {
             if (url.contains(item)) return true;
         }

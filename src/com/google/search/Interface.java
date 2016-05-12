@@ -4,6 +4,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.ResourceBundle;
 
@@ -26,11 +27,16 @@ public class Interface extends JFrame{
     private JCheckBox megogoCheckBox;
     private JCheckBox TVZavrCheckBox;
     private JCheckBox iviCheckBox;
+    private Thread tRun;
     private boolean isStopped;
     private static ResourceBundle res = ResourceBundle.getBundle(SearchAgent.RESOURCE_PATH + "common_en");
 
     private MyPathInputVerifier verifier1;
     private MyPagesInputVerifier verifier2;
+
+    public void setStopped(boolean stopped) {
+        isStopped = stopped;
+    }
 
     public Interface() {
         super(res.getString("version"));
@@ -117,6 +123,7 @@ public class Interface extends JFrame{
         searchButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+                status.setText("");
                 verifier1 = new MyPathInputVerifier();
                 verifier2 = new MyPagesInputVerifier();
                 if (verifier1.verifyEmpty(textFieldPath)) {
@@ -140,8 +147,7 @@ public class Interface extends JFrame{
                                 if (!list.isEmpty()) SearchAgent.prog.setWhiteList(list);
                                 else SearchAgent.prog.setWhiteList(null);
 
-                                new SearchThread();
-                                isStopped = true;
+                                tRun = new SearchThread();
                             } else {
                                 status.setText(res.getString("invalid.number"));
                                 status.setForeground(Color.RED);
@@ -226,14 +232,28 @@ public class Interface extends JFrame{
 
     public class StatusThread extends Thread {
         public StatusThread() {
+            setDaemon(true);
             start();
         }
 
         @Override
         public void run() {
+            StringBuilder str = new StringBuilder("processing");
             while (!isStopped) {
-                status.setText("processing...");
+                if (str.length() > 50) str.setLength(10);
+                else str.append(".");
+                status.setText(str.toString());
                 status.setForeground(Color.BLUE);
+                try {
+                    Thread.sleep(500);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+
+            if (tRun.isInterrupted()) {
+                status.setText(res.getString("the.end"));
+                status.setForeground(Color.GREEN);
             }
         }
     };
@@ -247,9 +267,13 @@ public class Interface extends JFrame{
         public void run() {
             try {
                 SearchAgent.prog.runProgram();
+                isStopped = true;
             } catch (IOException e) {
+                isStopped = true;
                 status.setText(res.getString("general.issue"));
                 status.setForeground(Color.RED);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
         }
     };

@@ -6,13 +6,19 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import org.openqa.selenium.By;
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.firefox.FirefoxDriver;
+import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.support.ui.WebDriverWait;
 
 import java.awt.*;
 import java.io.*;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
-import java.util.ArrayList;
-import java.util.ResourceBundle;
+import java.text.SimpleDateFormat;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Created by Sergey.Chmihun on 03/04/2016.
@@ -110,29 +116,31 @@ public class SearchAgent {
         }
     }
 
-    public void runProgram () throws IOException {
+    public void runProgram () throws IOException, InterruptedException {
         createAttribute();
 
-        fileOutputName = System.getProperty("user.dir") + "\\Output\\" + "Results.txt";
-        fileOutputNameXls = System.getProperty("user.dir") + "\\Output\\" + "Results.xls";
+        Date currentDate = new Date();
+        SimpleDateFormat format = new SimpleDateFormat("yyyy-mm-dd_hh-mm-ss");
+        fileOutputName = System.getProperty("user.dir") + "\\Output\\Results_" + format.format(currentDate) + ".txt";
+        fileOutputNameXls = System.getProperty("user.dir") + "\\Output\\Results_" + format.format(currentDate) + ".xls";
         File file = new File(fileOutputName);
         File excelFile = new File(fileOutputNameXls);
 
         /** Check of existence of file that we want to create for output data */
-        int i = 1;
         while (true) {
             if (!excelFile.isFile()) {
                 workbook = Workbook.createWorkbook(excelFile);
                 break;
             } else {
-                excelFile = new File(System.getProperty("user.dir") + "\\Output\\" + "Results_" + i + ".xls");
-                i++;
+                Thread.sleep(1000);
+                excelFile = new File(System.getProperty("user.dir") + "\\Output\\Results_" + format.format(currentDate) + ".xls");
             }
         }
 
         try {
             file.createNewFile();
         } catch (IOException e) {
+            anInterface.setStopped(true);
             anInterface.getStatus().setText(res.getString("cant.create.file"));
             anInterface.getStatus().setForeground(Color.RED);
         }
@@ -170,7 +178,7 @@ public class SearchAgent {
         anInterface.getStatus().setForeground(Color.GREEN);
     }
 
-    public void saveLinks(String request, BufferedWriter writer, WritableSheet sheet, WritableSheet sheetYoutube) {
+    public void saveLinks(String request, BufferedWriter writer, WritableSheet sheet, WritableSheet sheetYoutube) throws IOException, InterruptedException {
         int lineNumber = 1;
         int lineNumberYoutube = 1;
 
@@ -188,17 +196,36 @@ public class SearchAgent {
                 writer.write(String.format("---------- Page #%s ----------", i + 1));
                 writer.write("\r\n");
             } catch (IOException e) {
+                anInterface.setStopped(true);
                 anInterface.getStatus().setText(res.getString("cant.write.to.file"));
                 anInterface.getStatus().setForeground(Color.RED);
             }
-
 
             Elements links = null;
             try {
                 links = Jsoup.connect(String.format("%s%s%s%s", googleLocation, URLEncoder.encode(request, charset), attribute, pages)).userAgent(userAgent).get().select("a");
             } catch (IOException e) {
-                anInterface.getStatus().setText(res.getString("google.ban"));
-                anInterface.getStatus().setForeground(Color.RED);
+
+                /** Google ban handler. Should be finalized!!!!!!  */
+
+                if (e.toString().contains("Status=503")){
+                    anInterface.setStopped(true);
+                    anInterface.getStatus().setText(res.getString("google.ban"));
+                    anInterface.getStatus().setForeground(Color.RED);
+
+                    /*String temp = e.toString().substring(e.toString().lastIndexOf("URL") + 4);
+                    WebDriver driver = new FirefoxDriver();
+                    driver.navigate().to(temp);
+                    driver.manage().timeouts().implicitlyWait(3, TimeUnit.SECONDS);
+
+                    WebDriverWait wait = new WebDriverWait(driver, 15);
+                    wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("sfdiv")));
+                    if (driver.findElement(By.id("sfdiv")).isDisplayed()){
+                        String link = driver.getCurrentUrl();
+                        links = Jsoup.connect(link).userAgent(userAgent).get().select("a");
+                    }*/
+                }
+
             }
             int counterOfFoundRes = 0;
 
@@ -216,6 +243,7 @@ public class SearchAgent {
                     try {
                         url = URLDecoder.decode(gUrl.substring(gUrl.indexOf('=') + 1, gUrl.indexOf('&')), "UTF-8");
                     } catch (UnsupportedEncodingException e) {
+                        anInterface.setStopped(true);
                         anInterface.getStatus().setText(res.getString("decoding.issue"));
                         anInterface.getStatus().setForeground(Color.RED);
                     }
@@ -228,6 +256,7 @@ public class SearchAgent {
                             try {
                                 writeToTxtFile(writer, gUrl);
                             } catch (IOException e) {
+                                anInterface.setStopped(true);
                                 anInterface.getStatus().setText(res.getString("cant.write.to.file"));
                                 anInterface.getStatus().setForeground(Color.RED);
                             }
@@ -238,6 +267,7 @@ public class SearchAgent {
                         try {
                             writeToTxtFile(writer, gUrl);
                         } catch (IOException e) {
+                            anInterface.setStopped(true);
                             anInterface.getStatus().setText(res.getString("cant.write.to.file"));
                             anInterface.getStatus().setForeground(Color.RED);
                         }
@@ -255,6 +285,7 @@ public class SearchAgent {
                     writer.write(res.getString("empty.result"));
                     writer.write("\r\n");
                 } catch (IOException e) {
+                    anInterface.setStopped(true);
                     anInterface.getStatus().setText(res.getString("cant.write.to.file"));
                     anInterface.getStatus().setForeground(Color.RED);
                 }
@@ -273,13 +304,19 @@ public class SearchAgent {
         }
     }
 
-    public boolean checkPlayer(String url) {
+    public boolean checkPlayer(String url) throws InterruptedException {
         for (String item : whiteList) {
             if (url.contains(item)) return true;
         }
 
-        //In this part program goes to every link and find all iframe elements and check if they equal to white list items. Don't work properly. I suppose there should be used multithreading.
-        /*Elements iframes = Jsoup.connect(url).userAgent(userAgent).get().select("iframe");
+        /** In this part program goes to every link and find all iframe elements and check if they equal to white list items. Don't work properly. I suppose there should be used multithreading. */
+        /*Elements iframes = null;
+        try {
+            iframes = Jsoup.connect(url).userAgent(userAgent).get().select("iframe");
+        } catch (IOException e) {
+            anInterface.getStatus().setText(res.getString("connection.issue"));
+            anInterface.getStatus().setForeground(Color.RED);
+        }
 
         for (Element element : iframes) {
             if (element != null && element.attr("src").contains("http")) {

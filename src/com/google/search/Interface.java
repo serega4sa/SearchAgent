@@ -28,6 +28,7 @@ public class Interface extends JFrame{
     private JCheckBox TVZavrCheckBox;
     private JCheckBox iviCheckBox;
     private Thread tRun;
+    private Thread tStatus;
     private boolean isStopped;
     private static ResourceBundle res = ResourceBundle.getBundle(SearchAgent.RESOURCE_PATH + "common_en");
 
@@ -130,7 +131,8 @@ public class Interface extends JFrame{
                     if (verifier2.verifyEmpty(textFieldPages)) {
                         if (verifier1.verify(textFieldPath)) {
                             if (verifier2.verify(textFieldPages)) {
-                                new StatusThread();
+                                isStopped = false;
+                                tStatus = new StatusThread();
 
                                 String file = textFieldPath.getText();
                                 SearchAgent.prog.setFileInputName(file);
@@ -168,6 +170,10 @@ public class Interface extends JFrame{
                 }
             }
         });
+    }
+
+    public Thread gettStatus() {
+        return tStatus;
     }
 
     public JLabel getStatus() {

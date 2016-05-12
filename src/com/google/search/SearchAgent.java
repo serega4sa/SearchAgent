@@ -2,6 +2,7 @@ package com.google.search;
 
 import jxl.Workbook;
 import jxl.write.*;
+import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -30,8 +31,9 @@ public class SearchAgent {
     private static ResourceBundle res = ResourceBundle.getBundle(SearchAgent.RESOURCE_PATH + "common_en");
 
     private String fileInputName;
-    private String fileOutputName;
     private String fileOutputNameXls;
+    private Date currentDate;
+    private SimpleDateFormat format;
     private int numberOfPages;
     private String qDuration;
     private String vDuration;
@@ -86,6 +88,14 @@ public class SearchAgent {
 
     public void setFileInputName(String fileInputName) {
         this.fileInputName = System.getProperty("user.dir") + "\\Input\\" + fileInputName;
+        /** Automatically creates output name */
+        currentDate = new Date();
+        format = new SimpleDateFormat("yyyy-mm-dd_hh-mm-ss");
+        this.fileOutputNameXls = System.getProperty("user.dir") + "\\Output\\Results_" + format.format(currentDate) + ".xls";
+    }
+
+    public String getFileOutputNameXls() {
+        return fileOutputNameXls;
     }
 
     public int getNumberOfPages() {
@@ -119,11 +129,6 @@ public class SearchAgent {
     public void runProgram () throws IOException, InterruptedException {
         createAttribute();
 
-        Date currentDate = new Date();
-        SimpleDateFormat format = new SimpleDateFormat("yyyy-mm-dd_hh-mm-ss");
-        fileOutputName = System.getProperty("user.dir") + "\\Output\\Results_" + format.format(currentDate) + ".txt";
-        fileOutputNameXls = System.getProperty("user.dir") + "\\Output\\Results_" + format.format(currentDate) + ".xls";
-        File file = new File(fileOutputName);
         File excelFile = new File(fileOutputNameXls);
 
         /** Check of existence of file that we want to create for output data */
@@ -137,16 +142,6 @@ public class SearchAgent {
             }
         }
 
-        try {
-            file.createNewFile();
-        } catch (IOException e) {
-            anInterface.setStopped(true);
-            anInterface.getStatus().setText(res.getString("cant.create.file"));
-            anInterface.getStatus().setForeground(Color.RED);
-        }
-
-        BufferedWriter writer = new BufferedWriter(new FileWriter(fileOutputName));
-
         BufferedReader r = new BufferedReader(new FileReader(fileInputName));
         ArrayList<String> listOfRequests = new ArrayList<>();
 
@@ -159,14 +154,11 @@ public class SearchAgent {
 
         /** For each request we create separate tab */
         for (String item : listOfRequests) {
-            writer.write(String.format("========== Request: %s ==========", item));
-            writer.write("\r\n");
             WritableSheet sheet = workbook.createSheet(item, 0);
             WritableSheet sheetYoutube = workbook.createSheet(item + " Youtube", 0);
-            saveLinks(item, writer, sheet, sheetYoutube);
+            saveLinks(item, sheet, sheetYoutube);
         }
 
-        writer.close();
         try {
             workbook.write();
             workbook.close();
@@ -178,7 +170,7 @@ public class SearchAgent {
         anInterface.getStatus().setForeground(Color.GREEN);
     }
 
-    public void saveLinks(String request, BufferedWriter writer, WritableSheet sheet, WritableSheet sheetYoutube) throws IOException, InterruptedException {
+    public void saveLinks(String request, WritableSheet sheet, WritableSheet sheetYoutube) throws IOException, InterruptedException {
         int lineNumber = 1;
         int lineNumberYoutube = 1;
 
@@ -192,41 +184,36 @@ public class SearchAgent {
             }
             String pages = "&start=" + i * 10;
 
-            try {
-                writer.write(String.format("---------- Page #%s ----------", i + 1));
-                writer.write("\r\n");
-            } catch (IOException e) {
-                anInterface.setStopped(true);
-                anInterface.getStatus().setText(res.getString("cant.write.to.file"));
-                anInterface.getStatus().setForeground(Color.RED);
-            }
-
             Elements links = null;
             try {
                 links = Jsoup.connect(String.format("%s%s%s%s", googleLocation, URLEncoder.encode(request, charset), attribute, pages)).userAgent(userAgent).get().select("a");
             } catch (IOException e) {
 
                 /** Google ban handler. Should be finalized!!!!!!  */
-
                 if (e.toString().contains("Status=503")){
                     anInterface.setStopped(true);
                     anInterface.getStatus().setText(res.getString("google.ban"));
                     anInterface.getStatus().setForeground(Color.RED);
 
-                    /*String temp = e.toString().substring(e.toString().lastIndexOf("URL") + 4);
-                    WebDriver driver = new FirefoxDriver();
-                    driver.navigate().to(temp);
-                    driver.manage().timeouts().implicitlyWait(3, TimeUnit.SECONDS);
+                        String temp = e.toString().substring(e.toString().lastIndexOf("URL") + 4);
+                        WebDriver driver = new FirefoxDriver();
+                        driver.navigate().to(temp);
+                        driver.manage().timeouts().implicitlyWait(3, TimeUnit.SECONDS);
 
-                    WebDriverWait wait = new WebDriverWait(driver, 15);
-                    wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("sfdiv")));
-                    if (driver.findElement(By.id("sfdiv")).isDisplayed()){
-                        String link = driver.getCurrentUrl();
-                        links = Jsoup.connect(link).userAgent(userAgent).get().select("a");
-                    }*/
+                        WebDriverWait wait = new WebDriverWait(driver, 15);
+                        wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("sfdiv")));
+                        if (driver.findElement(By.id("sfdiv")).isDisplayed()){
+                            anInterface.setStopped(false);
+                            String link = driver.getCurrentUrl();
+                            links = Jsoup.connect(link).userAgent(userAgent).get().select("a");
+                            driver.close();
+                        } else {
+                            anInterface.getStatus().setText(res.getString("time.out"));
+                            anInterface.getStatus().setForeground(Color.RED);
+                        }
                 }
-
             }
+
             int counterOfFoundRes = 0;
 
             for (Element link : links) {
@@ -253,24 +240,10 @@ public class SearchAgent {
                         lineNumberYoutube++;
                     } else if (whiteList != null) {
                         if (!checkPlayer(url)) {
-                            try {
-                                writeToTxtFile(writer, gUrl);
-                            } catch (IOException e) {
-                                anInterface.setStopped(true);
-                                anInterface.getStatus().setText(res.getString("cant.write.to.file"));
-                                anInterface.getStatus().setForeground(Color.RED);
-                            }
                             writeToXlsFile(sheet, gUrl, lineNumber, null);
                             lineNumber++;
                         }
                     } else {
-                        try {
-                            writeToTxtFile(writer, gUrl);
-                        } catch (IOException e) {
-                            anInterface.setStopped(true);
-                            anInterface.getStatus().setText(res.getString("cant.write.to.file"));
-                            anInterface.getStatus().setForeground(Color.RED);
-                        }
                         writeToXlsFile(sheet, gUrl, lineNumber, null);
                         lineNumber++;
                     }
@@ -281,15 +254,6 @@ public class SearchAgent {
 
             /** If on the page no matches, write message */
             if (counterOfFoundRes == 0) {
-                try {
-                    writer.write(res.getString("empty.result"));
-                    writer.write("\r\n");
-                } catch (IOException e) {
-                    anInterface.setStopped(true);
-                    anInterface.getStatus().setText(res.getString("cant.write.to.file"));
-                    anInterface.getStatus().setForeground(Color.RED);
-                }
-
                 WritableFont cellFont = new WritableFont(WritableFont.ARIAL, 10);
                 try {
                     cellFont.setColour(Colour.RED);
@@ -329,12 +293,6 @@ public class SearchAgent {
         }*/
 
         return false;
-    }
-
-    public void writeToTxtFile(BufferedWriter writer, String gUrl) throws IOException {
-        //writer.write(String.format("Title: %s  - Google URL: %s  - Content URL: %s", title, gUrl, url));   - old realization
-        writer.write(gUrl);
-        writer.write("\r\n");
     }
 
     public void writeToXlsFile(WritableSheet sheet, String gUrl, int lineNumber, WritableCellFormat cellFormat) {

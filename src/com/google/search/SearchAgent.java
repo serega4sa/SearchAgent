@@ -86,9 +86,9 @@ public class SearchAgent {
         return fileInputName;
     }
 
+    /** This method sets input and output file paths and automatically creates output file name with time stamp */
     public void setFileInputName(String fileInputName) {
         this.fileInputName = System.getProperty("user.dir") + "\\Input\\" + fileInputName;
-        /** Automatically creates output name */
         currentDate = new Date();
         format = new SimpleDateFormat("yyyy-mm-dd_hh-mm-ss");
         this.fileOutputNameXls = System.getProperty("user.dir") + "\\Output\\Results_" + format.format(currentDate) + ".xls";
@@ -110,6 +110,7 @@ public class SearchAgent {
         this.whiteList = whiteList;
     }
 
+    /** This method depending on the info that user specified creates attribute*/
     public void createAttribute() {
         if (!qDuration.isEmpty()) {
             if (!vDuration.isEmpty()) {
@@ -152,7 +153,7 @@ public class SearchAgent {
 
         r.close();
 
-        /** For each request we create separate tab */
+        /** For each request we create separate tab in XLS file and launch saveLinks method */
         for (String item : listOfRequests) {
             WritableSheet sheet = workbook.createSheet(item, 0);
             WritableSheet sheetYoutube = workbook.createSheet(item + " Youtube", 0);
@@ -170,10 +171,12 @@ public class SearchAgent {
         anInterface.getStatus().setForeground(Color.GREEN);
     }
 
+    /** This method saves links to the output XLS file, preliminarily checking them on the compliance with request and filtering allowed sources */
     public void saveLinks(String request, WritableSheet sheet, WritableSheet sheetYoutube) throws IOException, InterruptedException {
         int lineNumber = 1;
         int lineNumberYoutube = 1;
 
+        /** We go through all pages for current request */
         for (int i = 0; i < numberOfPages; i++){
             int x = i + 1;
             jxl.write.Label cell = new jxl.write.Label(0, lineNumber, "Page #" + x);
@@ -216,6 +219,7 @@ public class SearchAgent {
 
             int counterOfFoundRes = 0;
 
+            /** Parse all founded on the page links */
             for (Element link : links) {
                 String title = link.text();
                 String alternativeRequest = "";
@@ -223,7 +227,7 @@ public class SearchAgent {
                     alternativeRequest = request.toLowerCase().replaceAll("ё", "е");
                 }
 
-                /** Check if link title matches the query */
+                /** Check if link title matches the query, including possible alternative request spelling */
                 if (title.toLowerCase().contains(request.toLowerCase()) || (!alternativeRequest.isEmpty() && title.toLowerCase().contains(alternativeRequest))) {
                     String gUrl = link.absUrl("href"); // absUrl("href") - Google returns URLs in format "http://www.google.com/url?q=<url>&sa=U&ei=<someKey>".
                     String url = null;
@@ -235,6 +239,7 @@ public class SearchAgent {
                         anInterface.getStatus().setForeground(Color.RED);
                     }
 
+                    /** Write results to the output file. Youtube links go to the separate tab, other if they are not in the white list go to main tab */
                     if (gUrl.contains("youtube")) {
                         writeToXlsFile(sheetYoutube, gUrl, lineNumberYoutube, null);
                         lineNumberYoutube++;
@@ -252,7 +257,7 @@ public class SearchAgent {
                 }
             }
 
-            /** If on the page no matches, write message */
+            /** If on the page no matches, write message to the file */
             if (counterOfFoundRes == 0) {
                 WritableFont cellFont = new WritableFont(WritableFont.ARIAL, 10);
                 try {
@@ -268,6 +273,7 @@ public class SearchAgent {
         }
     }
 
+    /** This method checks whether link contain names of the sites that are specified in the white list and skip them */
     public boolean checkPlayer(String url) throws InterruptedException {
         for (String item : whiteList) {
             if (url.contains(item)) return true;
@@ -295,6 +301,7 @@ public class SearchAgent {
         return false;
     }
 
+    /** This method writes to output data to XLS file */
     public void writeToXlsFile(WritableSheet sheet, String gUrl, int lineNumber, WritableCellFormat cellFormat) {
         jxl.write.Label cell;
         if (cellFormat != null) {

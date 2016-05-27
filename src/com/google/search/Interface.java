@@ -30,6 +30,7 @@ public class Interface extends JFrame{
     private Thread tRun;
     private Thread tStatus;
     private boolean isStopped;
+    private  boolean isSuspended;
     private static ResourceBundle res = ResourceBundle.getBundle(SearchAgent.RESOURCE_PATH + "common_en");
 
     private MyPathInputVerifier verifier1;
@@ -37,6 +38,10 @@ public class Interface extends JFrame{
 
     public void setStopped(boolean stopped) {
         isStopped = stopped;
+    }
+
+    public void setSuspended(boolean suspended) {
+        isSuspended = suspended;
     }
 
     public Interface() {
@@ -132,6 +137,7 @@ public class Interface extends JFrame{
                         if (verifier1.verify(textFieldPath)) {
                             if (verifier2.verify(textFieldPages)) {
                                 isStopped = false;
+                                isSuspended = false;
                                 tStatus = new StatusThread();
 
                                 String file = textFieldPath.getText();
@@ -240,24 +246,33 @@ public class Interface extends JFrame{
         public StatusThread() {
             setDaemon(true);
             start();
+
         }
 
         @Override
         public void run() {
             StringBuilder str = new StringBuilder("processing");
             while (!isStopped) {
-                if (str.length() > 50) str.setLength(10);
-                else str.append(".");
-                status.setText(str.toString());
-                status.setForeground(Color.BLUE);
-                try {
-                    Thread.sleep(500);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
+                if (!isSuspended) {
+                    if (str.length() > 50) str.setLength(10);
+                    else str.append(".");
+                    status.setText(str.toString());
+                    status.setForeground(Color.BLUE);
+                    try {
+                        Thread.sleep(500);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                } else {
+                    try {
+                        sleep(1000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
                 }
             }
 
-            if (tRun.isInterrupted()) {
+            if (!tRun.isInterrupted()) {
                 status.setText(res.getString("the.end"));
                 status.setForeground(Color.GREEN);
             }

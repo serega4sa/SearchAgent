@@ -210,7 +210,7 @@ public class SearchAgent {
     public void bannedParser (String temp, String request, WritableSheet sheet, WritableSheet sheetYoutube, int x) throws IOException, InterruptedException {
         WebDriver driver = new FirefoxDriver();
         driver.manage().window().setPosition(new Point(0, 0));
-        driver.manage().window().setSize(new org.openqa.selenium.Dimension(600,350));
+        driver.manage().window().setSize(new org.openqa.selenium.Dimension(600,500));
         driver.navigate().to(temp);
         driver.manage().timeouts().implicitlyWait(3, TimeUnit.SECONDS);
 

@@ -5,5 +5,7 @@ done - Add check of existence of file (results.xls). If exist, wait 1 sec and cr
 done - Add properties for messages
 done - Add multithreading for showing messages
 done - Do refractoring (erase old functionality - txt writer)
+done - Add logging
+done - Improve Google ban handler in such a way that user enter capture only once per session
 Finalize checking of player (implement multithreading)
-Check/improve requests processing mechanism
+Check/Improve requests processing mechanism

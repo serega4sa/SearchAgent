@@ -2,30 +2,33 @@ package com.google.search;
 
 import jxl.Workbook;
 import jxl.write.*;
-import org.jsoup.Connection;
 import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
-import org.openqa.selenium.*;
+import org.openqa.selenium.By;
 import org.openqa.selenium.Point;
+import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.firefox.FirefoxDriver;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.awt.*;
-import java.awt.Dimension;
 import java.io.*;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.ResourceBundle;
 import java.util.concurrent.TimeUnit;
 
 /**
  * Created by Sergey.Chmihun on 03/04/2016.
  */
 public class SearchAgent {
+    private static final Logger logger = LoggerFactory.getLogger(SearchAgent.class.getName());
     private String charset = "UTF-8";
     private String userAgent = "Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10.4; en-US; rv:1.9.2.2) Gecko/20100316 Firefox/3.6.2";
     public static final String RESOURCE_PATH = "com.google.search.resources.";
@@ -45,16 +48,19 @@ public class SearchAgent {
     private int counterOfFoundRes;
     private int lineNumber;
     private int lineNumberYoutube;
+    private boolean isBannedByGoogle = false;
+    private WebDriver driver;
 
     public static SearchAgent prog;
     public static Interface anInterface;
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         prog = new SearchAgent();
         anInterface = new Interface();
     }
 
     public void setqDuration(String qDuration) {
+        logger.debug("qDuration = " + qDuration);
         if (qDuration.equals("any")) this.qDuration = "";
         if (qDuration.equals("hour")) this.qDuration = "h";
         if (qDuration.equals("day")) this.qDuration = "d";
@@ -64,18 +70,21 @@ public class SearchAgent {
     }
 
     public void setvDuration(String vDuration) {
+        logger.debug("vDuration = " + vDuration);
         if (vDuration.equals("any")) this.vDuration = "";
         if (vDuration.equals("medium")) this.vDuration = "m";
         if (vDuration.equals("long")) this.vDuration = "l";
     }
 
     public void setGoogleLocation(String location) {
+        logger.debug("GoogleLocation = " + location);
         if (location.equals("ua")) this.googleLocation = "http://www.google.com.ua/search?q=";
         if (location.equals("ru")) this.googleLocation = "http://www.google.ru/search?q=";
     }
 
     /** This method sets input and output file paths and automatically creates output file name with time stamp */
     public void setFileInputName(String fileInputName) {
+        logger.debug("FileInputName = " + fileInputName);
         this.fileInputName = System.getProperty("user.dir") + "\\Input\\" + fileInputName;
         currentDate = new Date();
         format = new SimpleDateFormat("YYYY-MM-dd_hh-mm-ss");
@@ -83,10 +92,12 @@ public class SearchAgent {
     }
 
     public void setNumberOfPages(int numberOfPages) {
+        logger.debug("NumberOfPages="+numberOfPages);
         this.numberOfPages = numberOfPages;
     }
 
     public void setWhiteList(ArrayList<String> whiteList) {
+        logger.debug("WhiteList size = " + whiteList.size());
         this.whiteList = whiteList;
     }
 
@@ -107,7 +118,7 @@ public class SearchAgent {
         }
     }
 
-    public void runProgram () throws IOException, InterruptedException {
+    public void runProgram () throws IOException {
         createAttribute();
 
         File excelFile = new File(fileOutputNameXls);
@@ -118,41 +129,50 @@ public class SearchAgent {
                 workbook = Workbook.createWorkbook(excelFile);
                 break;
             } else {
-                Thread.sleep(1000);
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    logger.error("Interrupted Exception", e);
+                }
                 excelFile = new File(System.getProperty("user.dir") + "\\Output\\Results_" + format.format(currentDate) + ".xls");
             }
         }
 
-        BufferedReader r = new BufferedReader(new FileReader(fileInputName));
-        ArrayList<String> listOfRequests = new ArrayList<>();
-
-        while (r.ready()) {
-            String request = r.readLine();
-            listOfRequests.add(request);
-        }
-
-        r.close();
-
-        /** For each request we create separate tab in XLS file and launch saveLinks method */
-        for (String item : listOfRequests) {
-            WritableSheet sheet = workbook.createSheet(item, 0);
-            WritableSheet sheetYoutube = workbook.createSheet(item + " Youtube", 0);
-            saveLinks(item, sheet, sheetYoutube);
-        }
-
         try {
+            BufferedReader r = new BufferedReader(new FileReader(fileInputName));
+            ArrayList<String> listOfRequests = new ArrayList<>();
+
+            while (r.ready()) {
+                String request = r.readLine();
+                listOfRequests.add(request);
+            }
+
+            r.close();
+
+            /** For each request we create separate tab in XLS file and launch saveLinks method */
+            logger.debug("RequestsList size = " + listOfRequests.size());
+            for (String item : listOfRequests) {
+                WritableSheet sheet = workbook.createSheet(item, 0);
+                WritableSheet sheetYoutube = workbook.createSheet(item + " Youtube", 0);
+                saveLinks(item, sheet, sheetYoutube);
+            }
+
             workbook.write();
             workbook.close();
+        } catch (FileNotFoundException e) {
+            logger.error("Input file not found", e);
         } catch (WriteException e) {
-            e.printStackTrace();
+            logger.error("Can't close file", e);
         }
 
+        driver.quit();
         anInterface.getStatus().setText(res.getString("the.end"));
         anInterface.getStatus().setForeground(Color.GREEN);
     }
 
     /** This method saves links to the output XLS file, preliminarily checking them on the compliance with request and filtering allowed sources */
-    public void saveLinks(String request, WritableSheet sheet, WritableSheet sheetYoutube) throws IOException, InterruptedException {
+    public void saveLinks(String request, WritableSheet sheet, WritableSheet sheetYoutube) throws IOException {
+        logger.debug("Request = " + request, "Sheet name = " + sheet.getName(), "Sheet Youtube name = " + sheetYoutube.getName());
         lineNumber = 1;
         lineNumberYoutube = 1;
 
@@ -164,7 +184,7 @@ public class SearchAgent {
             try {
                 sheet.addCell(cell);
             } catch (WriteException e) {
-                e.printStackTrace();
+                logger.error("Can't add cell into file", e);
             }
             String pages = "&start=" + i * 10;
 
@@ -172,15 +192,24 @@ public class SearchAgent {
             try {
                 links = Jsoup.connect(String.format("%s%s%s%s", googleLocation, URLEncoder.encode(request, charset), attribute, pages)).userAgent(userAgent).get().select("a");
             } catch (IOException e) {
+                /** By using isBannedByGoogle we check whether our app is banned or not and choose next action: launch Webdriver or continue using already launched Webdriver */
+                if (!isBannedByGoogle) {
+                    logger.error("Can't get webpage", e);
+                    isBannedByGoogle = true;
 
-                /** Google ban handler */
-                if (e.toString().contains("Status=503")){
-                    anInterface.setSuspended(true);
-                    anInterface.getStatus().setText(res.getString("google.ban"));
-                    anInterface.getStatus().setForeground(Color.RED);
+                    /** Google ban handler */
+                    if (e.toString().contains("Status=503")){
+                        logger.debug("Google ban occurred. Initialized recovery mechanism");
+                        anInterface.setSuspended(true);
+                        anInterface.getStatus().setText(res.getString("google.ban"));
+                        anInterface.getStatus().setForeground(Color.RED);
 
-                    String temp = e.toString().substring(e.toString().lastIndexOf("URL") + 4);
-                    bannedParser(temp, request, sheet, sheetYoutube, x);
+                        String temp = e.toString().substring(e.toString().lastIndexOf("URL") + 4);
+                        bannedParser(temp, request, sheet, sheetYoutube, x);
+                        break;
+                    }
+                } else {
+                    bannedParser(null, request, sheet, sheetYoutube, x);
                     break;
                 }
             }
@@ -191,7 +220,8 @@ public class SearchAgent {
     }
 
     /** This method parses HTML page in usual situation by using jsoup connection */
-    public void usualParser (Elements links, String request, WritableSheet sheet, WritableSheet sheetYoutube) throws InterruptedException {
+    public void usualParser (Elements links, String request, WritableSheet sheet, WritableSheet sheetYoutube) {
+        logger.debug("Number of all found links = " + links.size());
         for (Element link : links) {
             ArrayList<String> urls = checkMatchingRequest(link, request);
 
@@ -206,19 +236,30 @@ public class SearchAgent {
         }
     }
 
-    /** This method parses HTML page in situation when Google ban requests and asks to enter capture. In this case uses WebDriver. User need to enter capture once per requested title */
-    public void bannedParser (String temp, String request, WritableSheet sheet, WritableSheet sheetYoutube, int x) throws IOException, InterruptedException {
-        WebDriver driver = new FirefoxDriver();
-        driver.manage().window().setPosition(new Point(0, 0));
-        driver.manage().window().setSize(new org.openqa.selenium.Dimension(600,500));
-        driver.navigate().to(temp);
-        driver.manage().timeouts().implicitlyWait(3, TimeUnit.SECONDS);
+    /** This method parses HTML page in situation when Google ban requests and asks to enter capture. In this case uses WebDriver. User need to enter capture only once per session */
+    public void bannedParser (String temp, String request, WritableSheet sheet, WritableSheet sheetYoutube, int x) throws IOException {
+        if (temp != null) {
+            logger.debug("Error URL = " + temp);
 
-        WebDriverWait wait = new WebDriverWait(driver, 120);
-        wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("sfdiv")));
+            System.setProperty("webdriver.gecko.driver", System.getProperty("user.dir") + "\\geckodriver.exe");
+            driver = new FirefoxDriver();
+            driver.manage().window().setPosition(new Point(0, 0));
+            driver.manage().window().setSize(new org.openqa.selenium.Dimension(600, 500));
+            driver.manage().timeouts().implicitlyWait(3, TimeUnit.SECONDS);
+            WebDriverWait wait = new WebDriverWait(driver, 120);
+            driver.navigate().to(temp);
+
+            wait.until(ExpectedConditions.presenceOfElementLocated(By.id("hdtbMenus")));
+        } else {
+            driver.findElement(By.id("lst-ib")).clear();
+            driver.findElement(By.id("lst-ib")).sendKeys(request);
+            driver.findElement(By.className("lsb")).click();
+        }
+
         Elements links = null;
 
-        if (driver.findElement(By.id("sfdiv")).isDisplayed()){
+        /** Check that search results are shown */
+        if (driver.findElements(By.id("hdtbMenus")).size() != 0) {
             anInterface.setSuspended(false);
             String link = driver.getCurrentUrl();
             links = Jsoup.connect(link).userAgent(userAgent).get().select("a");
@@ -236,7 +277,7 @@ public class SearchAgent {
                 try {
                     sheet.addCell(cell);
                 } catch (WriteException e) {
-                    e.printStackTrace();
+                    logger.error("Can't add cell into file", e);
                 }
 
                 /** Check whether next button exists and click */
@@ -268,8 +309,6 @@ public class SearchAgent {
 
             emptyPage(sheet);
         }
-
-        driver.close();
     }
 
     /** This method returns element that matches to the request */
@@ -287,6 +326,7 @@ public class SearchAgent {
             try {
                 urls.add(URLDecoder.decode(urls.get(0).substring(urls.get(0).indexOf('=') + 1, urls.get(0).indexOf('&')), "UTF-8"));
             } catch (UnsupportedEncodingException e) {
+                logger.error("Decoding issue", e);
                 anInterface.setStopped(true);
                 anInterface.getStatus().setText(res.getString("decoding.issue"));
                 anInterface.getStatus().setForeground(Color.RED);
@@ -297,7 +337,7 @@ public class SearchAgent {
         }
     }
 
-    public void writeToFile (String gUrl, String url, WritableSheet sheet, WritableSheet sheetYoutube) throws InterruptedException {
+    public void writeToFile (String gUrl, String url, WritableSheet sheet, WritableSheet sheetYoutube) {
         if (gUrl.contains("youtube")) {
             writeToXlsFile(sheetYoutube, url, lineNumberYoutube, null);
             lineNumberYoutube++;
@@ -319,7 +359,7 @@ public class SearchAgent {
             try {
                 cellFont.setColour(Colour.RED);
             } catch (WriteException e) {
-                e.printStackTrace();
+                logger.error("Can't add cell to file", e);
             }
             WritableCellFormat cellFormat = new WritableCellFormat(cellFont);
             writeToXlsFile(sheet, res.getString("empty.result"), lineNumber, cellFormat);
@@ -329,7 +369,7 @@ public class SearchAgent {
     }
 
     /** This method checks whether link contain names of the sites that are specified in the white list and skip them */
-    public boolean checkPlayer(String url) throws InterruptedException {
+    public boolean checkPlayer(String url) {
         for (String item : whiteList) {
             if (url.contains(item)) return true;
         }
@@ -356,7 +396,7 @@ public class SearchAgent {
         return false;
     }
 
-    /** This method writes to output data to XLS file */
+    /** This method writes output data to XLS file */
     public void writeToXlsFile(WritableSheet sheet, String gUrl, int lineNumber, WritableCellFormat cellFormat) {
         jxl.write.Label cell;
         if (cellFormat != null) {
@@ -368,7 +408,7 @@ public class SearchAgent {
         try {
             sheet.addCell(cell);
         } catch (WriteException e) {
-            e.printStackTrace();
+            logger.error("Can't add cell into file", e);
         }
     }
 }

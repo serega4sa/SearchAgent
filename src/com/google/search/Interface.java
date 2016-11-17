@@ -1,10 +1,15 @@
 package com.google.search;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.ResourceBundle;
 
@@ -12,6 +17,7 @@ import java.util.ResourceBundle;
  * Created by Sergey.Chmihun on 03/30/2016.
  */
 public class Interface extends JFrame{
+    private static final Logger logger = LoggerFactory.getLogger(Interface.class.getName());
     JFrame frame = new JFrame();
 
     private JComboBox comboBoxqDur;
@@ -37,10 +43,12 @@ public class Interface extends JFrame{
     private MyPagesInputVerifier verifier2;
 
     public void setStopped(boolean stopped) {
+        logger.debug("Set stopped = " + stopped);
         isStopped = stopped;
     }
 
     public void setSuspended(boolean suspended) {
+        logger.debug("Set suspended = " + suspended);
         isSuspended = suspended;
     }
 
@@ -129,6 +137,7 @@ public class Interface extends JFrame{
         searchButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+                logger.debug("Action performed = " + e.getActionCommand());
                 status.setText("");
                 verifier1 = new MyPathInputVerifier();
                 verifier2 = new MyPagesInputVerifier();
@@ -246,7 +255,6 @@ public class Interface extends JFrame{
         public StatusThread() {
             setDaemon(true);
             start();
-
         }
 
         @Override
@@ -261,13 +269,13 @@ public class Interface extends JFrame{
                     try {
                         Thread.sleep(500);
                     } catch (InterruptedException e) {
-                        e.printStackTrace();
+                        logger.error("Interrupted Exception", e);
                     }
                 } else {
                     try {
                         sleep(1000);
                     } catch (InterruptedException e) {
-                        e.printStackTrace();
+                        logger.error("Interrupted Exception", e);
                     }
                 }
             }
@@ -279,7 +287,7 @@ public class Interface extends JFrame{
         }
     };
 
-    public class SearchThread extends Thread {
+    public class SearchThread extends Thread implements Thread.UncaughtExceptionHandler{
         public SearchThread() {
             start();
         }
@@ -290,12 +298,18 @@ public class Interface extends JFrame{
                 SearchAgent.prog.runProgram();
                 isStopped = true;
             } catch (IOException e) {
+                logger.error("General issue", e);
                 isStopped = true;
                 status.setText(res.getString("general.issue"));
                 status.setForeground(Color.RED);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
             }
+        }
+
+        /** Logger that writes all uncaught exceptions to the log file */
+        private final Logger log = LoggerFactory.getLogger(SearchThread.class);
+
+        public void uncaughtException(Thread t, Throwable ex) {
+            log.error("Uncaught exception in thread: " + t.getName(), ex);
         }
     };
 }
